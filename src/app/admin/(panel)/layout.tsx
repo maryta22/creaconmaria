@@ -10,7 +10,11 @@ export default async function LayoutPanel({ children }: { children: React.ReactN
   return (
     <div className="flex min-h-screen flex-col">
       <NavAdmin />
-      <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10">{children}</main>
+      {/* El panel va contenido, salvo las páginas que piden todo el ancho
+          (el mapa de tejido) marcándose con `pagina-ancha`. */}
+      <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10 has-[.pagina-ancha]:max-w-none">
+        {children}
+      </main>
     </div>
   );
 }

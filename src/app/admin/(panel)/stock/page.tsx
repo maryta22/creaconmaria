@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { CATEGORIAS, categoriaPorId } from "@/lib/categorias";
 import { medidaCorta, precio } from "@/lib/formato";
 import FotoProducto from "@/components/FotoProducto";
+import SubnavStock from "@/components/SubnavStock";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,8 @@ export default async function Stock({
         <Link href="/admin/stock/nuevo" className="btn btn-chico">Cargar pieza</Link>
       </div>
       <div className="filete my-6 max-w-[8rem]" />
+
+      <SubnavStock actual="piezas" />
 
       <nav className="mb-8 flex flex-wrap gap-2">
         <Link href="/admin/stock" className={filtro ? "chip" : "chip chip-oro"}>Todo</Link>

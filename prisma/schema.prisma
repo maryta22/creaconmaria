@@ -55,7 +55,8 @@ model Producto {
   creadoEn      DateTime @default(now())
   actualizadoEn DateTime @updatedAt
 
-  fotos Foto[]
+  fotos  Foto[]
+  patron PatronCartera?
 
   @@index([categoria])
   @@index([publicado])
@@ -71,4 +72,102 @@ model Foto {
   orden      Int      @default(0)
 
   @@index([productoId])
+}
+
+/// El patrón 3D de una cartera: sus medidas, su paleta y el color de cada
+/// cuenta. `celdas` es un caracter base36 por cuenta, en el orden en que
+/// `armarLayout()` genera la lista (ver src/lib/cartera/geometria.ts).
+/// Cuenta o insumo disponible para tejer. Este es el inventario que alimenta
+/// las opciones de color y tamaño del diseñador de carteras y del diseñador
+/// del cliente (`/disenar`).
+model CuentaStock {
+  id            String   @id @default(cuid())
+  nombre        String
+  color         String
+  tamanoMm      Float
+  acabado       String   @default("perla")
+  /// Lo que paga el cliente por cada cuenta en el diseñador. 0 = todavía sin precio.
+  precioUnidad  Float    @default(0)
+  stock         Int      @default(0)
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  @@index([activo])
+}
+
+/// Dije o colgante disponible como insumo. Se guarda aparte de las cuentas
+/// porque no participa en la paleta ni en el conteo de tejido.
+model DijeStock {
+  id            String   @id @default(cuid())
+  nombre        String
+  descripcion   String?
+  stock         Int      @default(0)
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  @@index([activo])
+}
+
+model PatronCartera {
+  id     String @id @default(cuid())
+  slug   String @unique
+  nombre String
+  /// Ficha de `carteras diseños/` de la que salió, si viene de una.
+  ficha  String?
+
+  anchoCm       Float
+  altoCm        Float
+  profundidadCm Float
+  altoSolapaCm  Float
+  asaCm         Float
+  cuentaMm      Float
+  separacion    Float @default(1.3)
+
+  /// JSON con la paleta: [{ mm, color, nombre, acabado }]
+  paleta String
+  /// Un caracter base36 por cuenta.
+  celdas String
+
+  /// La pieza del catálogo que este patrón representa, si ya está cargada.
+  productoId String?   @unique
+  producto   Producto? @relation(fields: [productoId], references: [id], onDelete: SetNull)
+
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+}
+
+/// Un hilo de cuentas que armó un cliente en `/disenar`: pulsera, collar o
+/// colgador. `celdas` es un caracter base36 por cuenta —mismo formato que
+/// `PatronCartera.celdas`— en el orden del hilo, arrancando desde el cierre.
+///
+/// La paleta se guarda **copiada** adentro del diseño, no referenciada: si
+/// María borra una cuenta del inventario o le cambia el precio, el diseño que
+/// el cliente ya mandó tiene que seguir viéndose igual.
+model DisenoCliente {
+  id     String @id @default(cuid())
+  /// Seis caracteres. Es el link que se manda por WhatsApp: /disenar/ver/ABC123
+  codigo String @unique
+  /// PULSERA | COLLAR | COLGADOR — ver src/lib/hilo/tipos.ts
+  tipo   String
+  nombre String
+
+  /// JSON: [{ id, nombre, color, mm, acabado, precioUnidad }]
+  paleta String
+  celdas String
+
+  /// Largo que pidió el cliente, en cm. El real sale de sumar las cuentas.
+  largoObjetivoCm Float
+  /// Largo y precio calculados en el servidor al guardar.
+  largoCm Float
+  precio  Float @default(0)
+
+  /// Datos que dejó el cliente, si los dejó. Solo los ve María.
+  contacto String?
+  nota     String?
+
+  creadoEn DateTime @default(now())
+
+  @@index([creadoEn])
 }

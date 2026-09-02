@@ -2,8 +2,10 @@ import Link from "next/link";
 import FotoProducto from "./FotoProducto";
 import { medidaCorta, precio } from "@/lib/formato";
 import { nombreCategoria } from "@/lib/categorias";
+import BotonAgregarCarrito from "./BotonAgregarCarrito";
 
 export type ProductoEnVitrina = {
+  id: string;
   slug: string;
   nombre: string;
   categoria: string;
@@ -24,7 +26,8 @@ export default function TarjetaProducto({ p }: { p: ProductoEnVitrina }) {
   const agotado = p.stock <= 0;
 
   return (
-    <Link href={`/pieza/${p.slug}`} className="group block">
+    <article>
+      <Link href={`/pieza/${p.slug}`} className="group block">
       <div className="relative aspect-[4/5] overflow-hidden border border-linea bg-white">
         <FotoProducto
           url={p.fotos[0]?.url}
@@ -50,6 +53,19 @@ export default function TarjetaProducto({ p }: { p: ProductoEnVitrina }) {
           {medida && <span className="text-xs text-gris">{medida}</span>}
         </div>
       </div>
-    </Link>
+      </Link>
+      {!agotado && (
+        <div className="mt-4">
+          <BotonAgregarCarrito producto={{
+            id: p.id,
+            slug: p.slug,
+            nombre: p.nombre,
+            precio: p.precio,
+            stock: p.stock,
+            foto: p.fotos[0]?.url,
+          }} compacto />
+        </div>
+      )}
+    </article>
   );
 }

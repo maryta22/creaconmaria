@@ -25,7 +25,7 @@ extraer si María lo pide explícitamente o si cambió la imagen.
 ---
 imagen: X.jpg
 modelo: <nombre que dice el pliego>
-tipo: cartera | pulsera | collar | colgador | guia
+tipo: cartera | pulsera | collar | colgador | guia | tecnica
 categoria: CARTERA | PULSERA | COLLAR | COLGADOR
 tecnica: <tejido en cruz, etc.>
 extraido: <AAAA-MM-DD>
@@ -66,6 +66,9 @@ extraido: <AAAA-MM-DD>
   no lo estimes ni lo inventes.
 - Si el pliego es una guía de armado y no un modelo vendible, poné
   `tipo: guia` y decilo en la primera frase.
+- Si es un pliego de **punto** (cómo se teje, sin medidas ni modelo), va en
+  `carteras diseños/patrones/` con `tipo: tecnica`. Ahí no inventes medidas ni
+  conteos: esas fichas no los traen, y decirlo es parte de la ficha.
 - Enlazá con `[texto](otra-ficha.md)` los modelos que comparten construcción.
 - La ficha va en español, igual que el resto del repo.
 

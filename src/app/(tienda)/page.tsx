@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import { CATEGORIAS } from "@/lib/categorias";
 import TarjetaProducto from "@/components/TarjetaProducto";
@@ -26,24 +27,37 @@ export default async function Inicio() {
   return (
     <>
       {/* Portada */}
-      <section className="mx-auto max-w-6xl px-6 py-20 md:py-28">
-        <p className="sobretitulo">Bisutería hecha a mano</p>
-        <h1 className="titulo mt-4 max-w-3xl text-4xl leading-[1.15] md:text-6xl">
-          Cada pieza se teje cuenta por cuenta.
-        </h1>
-        <div className="filete my-8 max-w-xs" />
-        <p className="max-w-xl text-humo">
-          Pulseras, collares, colgadores de mochila y carteras de cuentas. Todo
-          está publicado con su medida exacta, así sabés cómo te va a quedar
-          antes de pedirlo.
-        </p>
-        <div className="mt-8 flex flex-wrap gap-3">
-          <Link href="/catalogo" className="btn">
-            Ver el catálogo
-          </Link>
-          <Link href="/catalogo/carteras" className="btn btn-linea">
-            Carteras de cuentas
-          </Link>
+      <section className="mx-auto grid max-w-6xl items-center gap-12 px-6 py-20 md:py-28 lg:grid-cols-[1.1fr_0.9fr]">
+        <div>
+          <p className="sobretitulo">Bisutería hecha a mano</p>
+          <h1 className="titulo mt-4 max-w-3xl text-4xl leading-[1.15] md:text-6xl">
+            Cada pieza se teje cuenta por cuenta.
+          </h1>
+          <div className="filete my-8 max-w-xs" />
+          <p className="max-w-xl text-humo">
+            Pulseras, collares, colgadores de mochila y carteras de cuentas. Todo
+            está publicado con su medida exacta, así sabés cómo te va a quedar
+            antes de pedirlo.
+          </p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Link href="/catalogo" className="btn">
+              Ver el catálogo
+            </Link>
+            <Link href="/catalogo/carteras" className="btn btn-linea">
+              Carteras de cuentas
+            </Link>
+          </div>
+        </div>
+
+        <div className="relative mx-auto h-64 w-full max-w-md overflow-hidden border border-linea bg-white sm:h-72">
+          <div className="absolute inset-4 border border-oro-claro" />
+          <Image
+            src="/logo.jpeg"
+            alt="Crea con María"
+            width={2048}
+            height={2048}
+            className="absolute left-1/2 top-[-17.5rem] w-[51rem] max-w-none -translate-x-1/2"
+          />
         </div>
       </section>
 

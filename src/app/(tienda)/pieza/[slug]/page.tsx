@@ -3,8 +3,11 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { categoriaPorId, nombreCategoria } from "@/lib/categorias";
 import { medidasDetalladas, precio } from "@/lib/formato";
-import FotoProducto from "@/components/FotoProducto";
 import TarjetaProducto from "@/components/TarjetaProducto";
+import GaleriaPieza, { type PatronVitrina } from "@/components/GaleriaPieza";
+import { armarLayout } from "@/lib/cartera/geometria";
+import { descomprimir } from "@/lib/cartera/modelos";
+import BotonAgregarCarrito from "@/components/BotonAgregarCarrito";
 
 export const dynamic = "force-dynamic";
 
@@ -17,9 +20,30 @@ export default async function Pieza({ params }: { params: Promise<{ slug: string
   const { slug } = await params;
   const p = await prisma.producto.findUnique({
     where: { slug },
-    include: { fotos: { orderBy: { orden: "asc" } } },
+    include: { fotos: { orderBy: { orden: "asc" } }, patron: true },
   });
   if (!p || !p.publicado) notFound();
+
+  // Si la pieza tiene patrón 3D, el cliente puede girarla cuenta por cuenta.
+  let patron: PatronVitrina | null = null;
+  if (p.patron) {
+    const medidas = {
+      anchoCm: p.patron.anchoCm,
+      altoCm: p.patron.altoCm,
+      profundidadCm: p.patron.profundidadCm,
+      altoSolapaCm: p.patron.altoSolapaCm,
+      asaCm: p.patron.asaCm,
+      cuentaMm: p.patron.cuentaMm,
+      separacion: p.patron.separacion,
+    };
+    const layout = armarLayout(medidas);
+    patron = {
+      medidas,
+      paleta: JSON.parse(p.patron.paleta),
+      celdas: descomprimir(p.patron.celdas, layout.cuentas.length),
+      totalCuentas: layout.cuentas.length,
+    };
+  }
 
   const categoria = categoriaPorId(p.categoria);
   const medidas = medidasDetalladas(p);
@@ -45,21 +69,8 @@ export default async function Pieza({ params }: { params: Promise<{ slug: string
       </nav>
 
       <div className="grid gap-12 lg:grid-cols-2">
-        {/* Fotos */}
-        <div>
-          <div className="aspect-[4/5] overflow-hidden border border-linea bg-white">
-            <FotoProducto url={p.fotos[0]?.url} alt={p.fotos[0]?.alt} nombre={p.nombre} />
-          </div>
-          {p.fotos.length > 1 && (
-            <div className="mt-3 grid grid-cols-4 gap-3">
-              {p.fotos.slice(1, 5).map((f) => (
-                <div key={f.id} className="aspect-square overflow-hidden border border-linea bg-white">
-                  <FotoProducto url={f.url} alt={f.alt} nombre={p.nombre} />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        {/* Fotos y, si la hay, la cartera en 3D */}
+        <GaleriaPieza nombre={p.nombre} fotos={p.fotos} patron={patron} />
 
         {/* Ficha */}
         <div>
@@ -106,13 +117,19 @@ export default async function Pieza({ params }: { params: Promise<{ slug: string
             </section>
           )}
 
-          <div className="mt-10 border border-linea bg-white p-5">
-            <p className="text-sm text-humo">
-              Para llevarte esta pieza escribile a María con el nombre{" "}
-              <strong className="text-tinta">{p.nombre}</strong>. Si está agotada
-              se puede tejer igual, en el color que quieras.
-            </p>
-          </div>
+          {!agotado && (
+            <div className="mt-8 max-w-sm">
+              <BotonAgregarCarrito producto={{
+                id: p.id,
+                slug: p.slug,
+                nombre: p.nombre,
+                precio: p.precio,
+                stock: p.stock,
+                foto: p.fotos[0]?.url,
+              }} />
+            </div>
+          )}
+
         </div>
       </div>
 

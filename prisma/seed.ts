@@ -9,6 +9,7 @@
  *   npm run db:seed
  */
 import { PrismaClient } from "@prisma/client";
+import { MODELOS, motivoInicial, comprimir } from "../src/lib/cartera/modelos";
 
 const prisma = new PrismaClient();
 
@@ -141,7 +142,25 @@ async function main() {
       create: pieza,
     });
   }
-  console.log(`Listo: ${PIEZAS.length} piezas de ejemplo.`);
+  // Patrones 3D de las carteras, generados desde las fichas de diseño.
+  for (const modelo of MODELOS) {
+    const producto = await prisma.producto.findUnique({ where: { slug: modelo.slug } });
+    const datos = {
+      nombre: modelo.nombre,
+      ficha: modelo.ficha,
+      ...modelo.medidas,
+      paleta: JSON.stringify(modelo.paleta),
+      celdas: comprimir(motivoInicial(modelo)),
+      productoId: producto?.id ?? null,
+    };
+    await prisma.patronCartera.upsert({
+      where: { slug: modelo.slug },
+      update: datos,
+      create: { slug: modelo.slug, ...datos },
+    });
+  }
+
+  console.log(`Listo: ${PIEZAS.length} piezas y ${MODELOS.length} patrones 3D.`);
 }
 
 main()

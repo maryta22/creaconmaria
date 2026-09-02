@@ -288,14 +288,14 @@ export default function FormProducto({ inicial }: { inicial: ValoresProducto }) 
               <div key={f.url} className="group relative aspect-square overflow-hidden border border-linea">
                 <FotoProducto url={f.url} nombre={v.nombre || "Pieza"} />
                 {i === 0 && (
-                  <span className="absolute left-1 top-1 bg-tinta px-1.5 py-0.5 text-[0.625rem] uppercase tracking-wider text-papel">
+                  <span className="absolute left-1 top-1 bg-tinta px-1.5 py-0.5 text-[0.6875rem] uppercase tracking-wider text-papel">
                     Portada
                   </span>
                 )}
                 <button
                   type="button"
                   onClick={() => set("fotos", v.fotos.filter((_, j) => j !== i))}
-                  className="absolute right-1 top-1 bg-tinta px-1.5 py-0.5 text-[0.625rem] uppercase text-papel opacity-0 transition-opacity group-hover:opacity-100"
+                  className="absolute right-1 top-1 bg-tinta px-1.5 py-0.5 text-[0.6875rem] uppercase text-papel opacity-0 transition-opacity group-hover:opacity-100"
                 >
                   Quitar
                 </button>

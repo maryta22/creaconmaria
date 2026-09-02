@@ -7,6 +7,7 @@ const ENLACES = [
   { href: "/admin", texto: "Resumen" },
   { href: "/admin/stock", texto: "Stock" },
   { href: "/admin/stock/nuevo", texto: "Cargar pieza" },
+  { href: "/admin/disenador", texto: "Diseñador 3D" },
 ];
 
 export default function NavAdmin() {
@@ -20,16 +21,16 @@ export default function NavAdmin() {
   }
 
   return (
-    <header className="border-b border-linea bg-tinta text-papel">
+    <header className="no-imprimir border-b border-linea bg-tinta text-papel">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-4">
         <Link href="/admin" className="leading-none">
           <span className="titulo text-lg tracking-[0.12em]">MARÍA</span>
-          <span className="ml-2 text-[0.6875rem] uppercase tracking-[0.2em] text-oro-claro">
+          <span className="ml-2 text-xs uppercase tracking-[0.2em] text-oro-claro">
             Panel
           </span>
         </Link>
 
-        <nav className="flex flex-wrap items-center gap-6 text-[0.8125rem] uppercase tracking-[0.12em]">
+        <nav className="flex flex-wrap items-center gap-6 text-sm uppercase tracking-[0.12em]">
           {ENLACES.map((e) => (
             <Link
               key={e.href}
