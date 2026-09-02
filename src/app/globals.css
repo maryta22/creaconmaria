@@ -1,0 +1,140 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------
+   Identidad: negro como color de acción, oro solo como acento,
+   serif editorial y mucho aire. Nada de rosas ni píldoras.
+   --------------------------------------------------------------- */
+@theme {
+  --color-tinta: #12100e;
+  --color-humo: #4a453e;
+  --color-gris: #8b847a;
+  --color-oro: #b08d3f;
+  --color-oro-claro: #d9c08a;
+  --color-papel: #faf8f4;
+  --color-hueso: #f1ece3;
+  --color-linea: #e2dbd0;
+
+  --font-titulo: Georgia, "Iowan Old Style", "Times New Roman", serif;
+  --font-texto: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
+html {
+  background: var(--color-papel);
+}
+
+body {
+  background: var(--color-papel);
+  color: var(--color-tinta);
+  font-family: var(--font-texto);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, .titulo {
+  font-family: var(--font-titulo);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+@layer components {
+  /* Ojal superior de sección: "CATÁLOGO", "MEDIDAS"… */
+  .sobretitulo {
+    font-size: 0.6875rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--color-gris);
+  }
+
+  .filete {
+    height: 1px;
+    background: linear-gradient(90deg, var(--color-oro), transparent);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: var(--color-tinta);
+    color: var(--color-papel);
+    font-size: 0.8125rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border: 1px solid var(--color-tinta);
+    transition: background 0.15s, color 0.15s;
+    cursor: pointer;
+  }
+  .btn:hover { background: transparent; color: var(--color-tinta); }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  .btn-linea {
+    background: transparent;
+    color: var(--color-tinta);
+    border-color: var(--color-linea);
+  }
+  .btn-linea:hover { background: var(--color-tinta); color: var(--color-papel); border-color: var(--color-tinta); }
+
+  .btn-chico { padding: 0.5rem 1rem; font-size: 0.75rem; }
+
+  .campo {
+    width: 100%;
+    padding: 0.625rem 0.75rem;
+    background: #fff;
+    border: 1px solid var(--color-linea);
+    font-size: 0.875rem;
+    color: var(--color-tinta);
+  }
+  .campo:focus { outline: none; border-color: var(--color-oro); }
+
+  .etiqueta {
+    display: block;
+    font-size: 0.6875rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-humo);
+    margin-bottom: 0.375rem;
+  }
+
+  .tarjeta {
+    background: #fff;
+    border: 1px solid var(--color-linea);
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.625rem;
+    border: 1px solid var(--color-linea);
+    font-size: 0.6875rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-humo);
+    background: #fff;
+  }
+  .chip-oro { border-color: var(--color-oro); color: var(--color-oro); }
+  .chip-agotado { border-color: var(--color-linea); color: var(--color-gris); background: var(--color-hueso); }
+
+  .precio {
+    font-family: var(--font-titulo);
+    font-size: 1.125rem;
+  }
+
+  /* Enlace de navegación con subrayado dorado al pasar/estar activo. */
+  .nav-enlace {
+    position: relative;
+    font-size: 0.8125rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-humo);
+    padding-bottom: 0.25rem;
+  }
+  .nav-enlace:hover, .nav-enlace[data-activo="true"] { color: var(--color-tinta); }
+  .nav-enlace[data-activo="true"]::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 1px;
+    background: var(--color-oro);
+  }
+}

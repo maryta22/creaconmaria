@@ -1,0 +1,74 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// Una pieza terminada, lista para vender. `stock` son unidades reales que
+/// María tiene en la mano: si llega a 0 la pieza se muestra como agotada.
+model Producto {
+  id        String @id @default(cuid())
+  slug      String @unique
+  nombre    String
+  /// PULSERA | COLGADOR | COLLAR | CARTERA — ver src/lib/categorias.ts
+  categoria String
+
+  descripcion String?
+  /// Texto libre: "Perlas 10 mm marfil, cuentas 6 mm rosa, dijes dorados".
+  materiales  String?
+  color       String?
+
+  // --- Medidas (en cm salvo cuentaMm). Cada categoría usa las suyas. ---
+  /// Pulsera, collar y colgador: largo total.
+  largoCm       Float?
+  /// Cartera: ancho.
+  anchoCm       Float?
+  /// Cartera: alto.
+  altoCm        Float?
+  /// Cartera: profundidad.
+  profundidadCm Float?
+  /// Diámetro de la cuenta principal, en mm.
+  cuentaMm      Float?
+  /// Pulsera con extensión regulable.
+  ajustable     Boolean @default(false)
+  /// Cuántos cm suma la extensión.
+  extensionCm   Float?
+
+  // --- Plata ---
+  /// Lo que le cuesta a María hacerla. Interno: nunca sale al cliente.
+  costo  Float @default(0)
+  /// Lo que paga el cliente.
+  precio Float @default(0)
+
+  // --- Estado ---
+  /// Unidades disponibles.
+  stock     Int     @default(0)
+  destacado Boolean @default(false)
+  /// Si está en false, no aparece en la tienda.
+  publicado Boolean @default(true)
+  /// Nota interna: proveedor, lote, dónde está guardada. No sale al cliente.
+  notaInterna String?
+
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  fotos Foto[]
+
+  @@index([categoria])
+  @@index([publicado])
+}
+
+/// Fotos de una pieza. Se guardan en public/uploads y acá va la ruta.
+model Foto {
+  id         String   @id @default(cuid())
+  productoId String
+  producto   Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
+  url        String
+  alt        String?
+  orden      Int      @default(0)
+
+  @@index([productoId])
+}

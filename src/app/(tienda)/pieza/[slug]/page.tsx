@@ -1,0 +1,132 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { prisma } from "@/lib/prisma";
+import { categoriaPorId, nombreCategoria } from "@/lib/categorias";
+import { medidasDetalladas, precio } from "@/lib/formato";
+import FotoProducto from "@/components/FotoProducto";
+import TarjetaProducto from "@/components/TarjetaProducto";
+
+export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  const p = await prisma.producto.findUnique({ where: { slug: (await params).slug } });
+  return { title: p?.nombre ?? "Pieza" };
+}
+
+export default async function Pieza({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const p = await prisma.producto.findUnique({
+    where: { slug },
+    include: { fotos: { orderBy: { orden: "asc" } } },
+  });
+  if (!p || !p.publicado) notFound();
+
+  const categoria = categoriaPorId(p.categoria);
+  const medidas = medidasDetalladas(p);
+  const agotado = p.stock <= 0;
+
+  const similares = await prisma.producto.findMany({
+    where: { publicado: true, categoria: p.categoria, id: { not: p.id } },
+    include: { fotos: { orderBy: { orden: "asc" } } },
+    orderBy: { creadoEn: "desc" },
+    take: 4,
+  });
+
+  return (
+    <div className="mx-auto max-w-6xl px-6 py-12">
+      <nav className="sobretitulo mb-8 flex gap-2">
+        <Link href="/catalogo" className="hover:text-tinta">Catálogo</Link>
+        <span>/</span>
+        {categoria && (
+          <Link href={`/catalogo/${categoria.slug}`} className="hover:text-tinta">
+            {categoria.nombre}
+          </Link>
+        )}
+      </nav>
+
+      <div className="grid gap-12 lg:grid-cols-2">
+        {/* Fotos */}
+        <div>
+          <div className="aspect-[4/5] overflow-hidden border border-linea bg-white">
+            <FotoProducto url={p.fotos[0]?.url} alt={p.fotos[0]?.alt} nombre={p.nombre} />
+          </div>
+          {p.fotos.length > 1 && (
+            <div className="mt-3 grid grid-cols-4 gap-3">
+              {p.fotos.slice(1, 5).map((f) => (
+                <div key={f.id} className="aspect-square overflow-hidden border border-linea bg-white">
+                  <FotoProducto url={f.url} alt={f.alt} nombre={p.nombre} />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Ficha */}
+        <div>
+          <p className="sobretitulo">{nombreCategoria(p.categoria)}</p>
+          <h1 className="titulo mt-2 text-4xl leading-tight">{p.nombre}</h1>
+          <p className="precio mt-4 text-2xl">{precio(p.precio)}</p>
+
+          <div className="mt-4">
+            {agotado ? (
+              <span className="chip chip-agotado">Agotada — se puede encargar</span>
+            ) : (
+              <span className="chip chip-oro">
+                {p.stock === 1 ? "Última disponible" : `${p.stock} disponibles`}
+              </span>
+            )}
+          </div>
+
+          {p.descripcion && (
+            <p className="mt-6 leading-relaxed text-humo">{p.descripcion}</p>
+          )}
+
+          {medidas.length > 0 && (
+            <section className="mt-10">
+              <p className="sobretitulo">Medidas</p>
+              <div className="filete mb-4 mt-2 max-w-[6rem]" />
+              <dl className="divide-y divide-linea border-y border-linea">
+                {medidas.map((m) => (
+                  <div key={m.etiqueta} className="flex justify-between py-2.5 text-sm">
+                    <dt className="text-humo">{m.etiqueta}</dt>
+                    <dd className="tabular-nums">{m.valor}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          )}
+
+          {(p.materiales || p.color) && (
+            <section className="mt-8">
+              <p className="sobretitulo">Materiales</p>
+              <div className="filete mb-4 mt-2 max-w-[6rem]" />
+              <p className="text-sm leading-relaxed text-humo">
+                {[p.materiales, p.color].filter(Boolean).join(" · ")}
+              </p>
+            </section>
+          )}
+
+          <div className="mt-10 border border-linea bg-white p-5">
+            <p className="text-sm text-humo">
+              Para llevarte esta pieza escribile a María con el nombre{" "}
+              <strong className="text-tinta">{p.nombre}</strong>. Si está agotada
+              se puede tejer igual, en el color que quieras.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {similares.length > 0 && (
+        <section className="mt-24">
+          <p className="sobretitulo">Más {categoria?.nombre.toLowerCase() ?? "piezas"}</p>
+          <div className="filete mb-8 mt-3 max-w-[8rem]" />
+          <div className="grid grid-cols-2 gap-x-6 gap-y-10 lg:grid-cols-4">
+            {similares.map((s) => (
+              <TarjetaProducto key={s.id} p={s} />
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
