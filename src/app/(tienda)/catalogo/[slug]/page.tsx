@@ -24,7 +24,7 @@ export default async function CatalogoPorCategoria({
 
   const productos = await prisma.producto.findMany({
     where: { publicado: true, categoria: categoria.id },
-    include: { fotos: { orderBy: { orden: "asc" } } },
+    include: { fotos: { orderBy: { orden: "asc" } }, patron: true },
     orderBy: [{ stock: "desc" }, { creadoEn: "desc" }],
   });
 
@@ -35,6 +35,7 @@ export default async function CatalogoPorCategoria({
       descripcion={categoria.descripcion}
       productos={productos}
       slugActivo={categoria.slug}
+      mostrarModelosBase={categoria.id === "PULSERA"}
     />
   );
 }

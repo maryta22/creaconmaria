@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { CATEGORIAS } from "@/lib/categorias";
 import TarjetaProducto from "@/components/TarjetaProducto";
 import FotoProducto from "@/components/FotoProducto";
+import { tipoPorCategoria } from "@/lib/hilo/tipos";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +12,7 @@ export default async function Inicio() {
   const [destacados, porCategoria] = await Promise.all([
     prisma.producto.findMany({
       where: { publicado: true, destacado: true },
-      include: { fotos: { orderBy: { orden: "asc" } } },
+      include: { fotos: { orderBy: { orden: "asc" } }, patron: true },
       orderBy: { creadoEn: "desc" },
       take: 8,
     }),
@@ -49,35 +50,51 @@ export default async function Inicio() {
           </div>
         </div>
 
-        <div className="relative mx-auto h-64 w-full max-w-md overflow-hidden border border-linea bg-white sm:h-72">
-          <div className="absolute inset-4 border border-oro-claro" />
-          <Image
-            src="/logo.jpeg"
-            alt="Crea con María"
-            width={2048}
-            height={2048}
-            className="absolute left-1/2 top-[-17.5rem] w-[51rem] max-w-none -translate-x-1/2"
-          />
+        <div className="relative mx-auto min-h-72 w-full max-w-md overflow-hidden rounded-2xl border border-linea bg-hueso shadow-[0_22px_50px_rgba(21,19,15,0.08)] sm:min-h-80">
+          <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full border-[18px] border-oro/20" />
+          <div className="absolute -bottom-16 -left-16 h-48 w-48 rounded-full bg-oro/10" />
+          <div className="absolute inset-0 opacity-40 [background-image:radial-gradient(var(--color-oro)_1px,transparent_1px)] [background-size:12px_12px]" />
+
+          <div className="absolute inset-x-7 top-8 h-48 rotate-[-3deg] rounded-lg border border-oro-claro bg-white shadow-[10px_12px_0_rgba(199,166,0,0.16)] sm:inset-x-10 sm:top-10 sm:h-52">
+            <Image
+              src="/logo.jpeg"
+              alt="Crea con María"
+              width={2048}
+              height={2048}
+              className="absolute left-1/2 top-[-15.5rem] w-[45rem] max-w-none -translate-x-1/2 mix-blend-multiply sm:top-[-16.75rem] sm:w-[49rem]"
+            />
+          </div>
+
+          <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between border-t border-linea bg-white/90 px-6 py-4 text-xs uppercase tracking-[0.18em] text-humo">
+            <span>Hecho a mano</span>
+            <span className="text-oro">Ecuador</span>
+          </div>
         </div>
       </section>
 
       {/* Las cuatro líneas */}
       <section className="mx-auto max-w-6xl px-6 pb-20">
         <div className="grid gap-px border border-linea bg-linea sm:grid-cols-2 lg:grid-cols-4">
-          {CATEGORIAS.map((c) => (
-            <Link
-              key={c.id}
-              href={`/catalogo/${c.slug}`}
-              className="group bg-papel p-6 transition-colors hover:bg-white"
-            >
-              <p className="sobretitulo">{cuenta.get(c.id) ?? 0} disponibles</p>
-              <h2 className="titulo mt-2 text-xl">{c.nombre}</h2>
-              <p className="mt-2 text-sm text-humo">{c.descripcion}</p>
-              <span className="mt-4 inline-block text-xs tracking-[0.14em] text-oro uppercase">
-                Ver →
-              </span>
-            </Link>
-          ))}
+          {CATEGORIAS.map((c) => {
+            const tipo = tipoPorCategoria(c.id);
+            return (
+              <article key={c.id} className="group bg-white p-6 transition-all hover:bg-hueso hover:shadow-[inset_0_0_0_1px_rgba(199,166,0,0.35)]">
+                <Link href={`/catalogo/${c.slug}`} className="block">
+                  <p className="sobretitulo">{cuenta.get(c.id) ?? 0} disponibles</p>
+                  <h2 className="titulo mt-2 text-xl">{c.nombre}</h2>
+                  <p className="mt-2 text-sm text-humo">{c.descripcion}</p>
+                  <span className="mt-4 inline-block text-xs tracking-[0.14em] text-oro uppercase">
+                    Ver →
+                  </span>
+                </Link>
+                {tipo && (
+                  <Link href={`/disenar/${tipo.slug}`} className="btn btn-linea btn-chico mt-5 w-full">
+                    Crea el tuyo
+                  </Link>
+                )}
+              </article>
+            );
+          })}
         </div>
       </section>
 

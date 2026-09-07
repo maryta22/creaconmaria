@@ -1,5 +1,26 @@
-export const ACABADOS_CUENTA = ["perla", "metal", "mate"] as const;
+export const ACABADOS_CUENTA = ["perla", "metal", "mate", "cristal"] as const;
 export type AcabadoCuenta = (typeof ACABADOS_CUENTA)[number];
+
+export const NOMBRES_ACABADO: Record<AcabadoCuenta, string> = {
+  perla: "Perla", metal: "Metal", mate: "Mate", cristal: "Cristal facetado",
+};
+
+export function acabadoDeCuenta(valor: string): AcabadoCuenta {
+  return ACABADOS_CUENTA.includes(valor as AcabadoCuenta) ? valor as AcabadoCuenta : "perla";
+}
+
+/** Muestra el corte del cristal también en los selectores de inventario. */
+export function estiloDeCuenta(cuenta: { color: string; acabado: string }) {
+  if (cuenta.acabado === "cristal") return {
+    borderRadius: 0,
+    clipPath: "polygon(50% 0, 100% 50%, 50% 100%, 0 50%)",
+    background: `conic-gradient(from 45deg, #ffffffb3, #ffffff00 25%, #00000035 50%, #ffffff90 75%, #ffffffb3), ${cuenta.color}`,
+  };
+  const luz = cuenta.acabado === "metal" ? 0.9 : 0.75;
+  return {
+    background: cuenta.acabado === "mate" ? cuenta.color : `radial-gradient(circle at 33% 27%, rgba(255,255,255,${luz}) 0%, rgba(255,255,255,0) 45%), ${cuenta.color}`,
+  };
+}
 
 export type CuentaDisponible = {
   id: string;
@@ -7,6 +28,8 @@ export type CuentaDisponible = {
   color: string;
   tamanoMm: number;
   acabado: AcabadoCuenta;
+  /** Lo que suma esta cuenta en el diseñador del cliente. */
+  precioUnidad: number;
   stock: number;
 };
 
@@ -27,6 +50,11 @@ export function datosDeCuenta(cuerpo: Record<string, unknown>) {
     return { error: "El tamaño debe estar entre 0 y 50 mm" } as const;
   }
 
+  const precioUnidad = Number(cuerpo.precioUnidad ?? 0);
+  if (!Number.isFinite(precioUnidad) || precioUnidad < 0) {
+    return { error: "El precio de la cuenta no puede ser negativo" } as const;
+  }
+
   const stock = Math.trunc(Number(cuerpo.stock));
   if (!Number.isFinite(stock) || stock < 0) return { error: "El stock no puede ser negativo" } as const;
 
@@ -38,6 +66,7 @@ export function datosDeCuenta(cuerpo: Record<string, unknown>) {
       nombre,
       color: color.toLowerCase(),
       tamanoMm,
+      precioUnidad,
       stock,
       acabado: acabado as AcabadoCuenta,
       activo: cuerpo.activo !== false,

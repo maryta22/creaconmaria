@@ -7,12 +7,16 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (!(await haySesion())) return NextResponse.json({ error: "No autorizada" }, { status: 401 });
   const datos = datosDeDije(await req.json());
   if ("error" in datos) return NextResponse.json({ error: datos.error }, { status: 400 });
-  await prisma.dijeStock.update({ where: { id: (await params).id }, data: datos.valores });
+  await prisma.$executeRaw`
+    UPDATE DijeStock
+    SET nombre = ${datos.valores.nombre}, descripcion = ${datos.valores.descripcion}, imagenUrl = ${datos.valores.imagenUrl}, stock = ${datos.valores.stock}, activo = ${datos.valores.activo ? 1 : 0}, actualizadoEn = CURRENT_TIMESTAMP
+    WHERE id = ${(await params).id}
+  `;
   return NextResponse.json({ ok: true });
 }
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   if (!(await haySesion())) return NextResponse.json({ error: "No autorizada" }, { status: 401 });
-  await prisma.dijeStock.delete({ where: { id: (await params).id } });
+  await prisma.$executeRaw`DELETE FROM DijeStock WHERE id = ${(await params).id}`;
   return NextResponse.json({ ok: true });
 }

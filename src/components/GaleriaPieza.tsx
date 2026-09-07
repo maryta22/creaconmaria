@@ -1,10 +1,13 @@
 "use client";
 
+import { acabadoDeCuenta } from "@/lib/cuentas";
+import { FORRO_BASE } from "@/lib/cuentas-base";
+import { celdasEnOtraMedida } from "@/lib/cartera/medida";
 import { useMemo, useState } from "react";
 import FotoProducto from "./FotoProducto";
 import Cartera3D from "./Cartera3D";
-import { BarraTejido, useTejido } from "./ReproductorTejido";
-import { armarLayout, type MedidasCartera } from "@/lib/cartera/geometria";
+import { usePersonalizacionCartera } from "./SelectorCuentaCartera";
+import type { MedidasCartera } from "@/lib/cartera/geometria";
 import type { CuentaPaleta } from "@/lib/cartera/modelos";
 
 export type PatronVitrina = {
@@ -12,6 +15,8 @@ export type PatronVitrina = {
   paleta: CuentaPaleta[];
   celdas: number[];
   totalCuentas: number;
+  /** Sin dibujo: se muestra con la cuenta patrón hasta que se elige el color. */
+  enGris: boolean;
 };
 
 export default function GaleriaPieza({
@@ -24,22 +29,66 @@ export default function GaleriaPieza({
   patron?: PatronVitrina | null;
 }) {
   // Si todavía no hay fotos pero sí patrón, arranca mostrando el 3D.
-  const [vista, setVista] = useState<"fotos" | "3d" | "tejido">(
+  /**
+   * **Tres vistas y una sola escena por vez.** *En persona* es el mismo visor
+   * con el maniquí puesto: una cartera sola en el aire no tiene tamaño, y al
+   * lado de alguien de 1,60 se entiende de una.
+   */
+  const [vista, setVista] = useState<"fotos" | "3d" | "persona">(
     patron && fotos.length === 0 ? "3d" : "fotos",
   );
   const [principal, setPrincipal] = useState(0);
-
-  const layout = useMemo(
-    () => (patron ? armarLayout(patron.medidas) : null),
-    [patron],
+  const personalizacion = usePersonalizacionCartera();
+  /**
+   * **Cambiar la medida de la cuenta cambia la pieza entera.** La misma cartera
+   * de 18 cm lleva 23 columnas en 8 mm y 18 en 10: el conteo no es el mismo, así
+   * que el dibujo se migra a la grilla nueva con `celdasEnOtraMedida()` en vez
+   * de reusar las celdas guardadas, que quedarían corridas.
+   */
+  const tamanoMm = personalizacion?.tamanoMm ?? patron?.medidas.cuentaMm ?? 8;
+  const medidas = useMemo(
+    () => (patron ? { ...patron.medidas, cuentaMm: tamanoMm } : null),
+    [patron, tamanoMm],
   );
-  const tejido = useTejido(layout?.cuentas.length ?? 0);
-  const enTejido = vista === "tejido" && patron && layout;
+  const celdas = useMemo(
+    () => (patron ? celdasEnOtraMedida(patron.medidas, patron.celdas, tamanoMm) : []),
+    [patron, tamanoMm],
+  );
 
+  const paleta = useMemo(() => {
+    // La cartera se teje entera con la misma cuenta: la paleta toma esa medida.
+    const base = (patron?.paleta ?? []).map((color) => ({ ...color, mm: tamanoMm }));
+    const cuenta = personalizacion?.cuenta;
+    if (!cuenta) return base;
+    return base.map((color) => color.mm === cuenta.tamanoMm ? {
+      ...color,
+      nombre: cuenta.nombre,
+      color: cuenta.color,
+      acabado: acabadoDeCuenta(cuenta.acabado),
+    } : color);
+  }, [patron, personalizacion?.cuenta, tamanoMm]);
+
+  /**
+   * **El visor tiene que entrar en la pantalla.** Queda fijo mientras se
+   * recorre la ficha, pero `sticky` no sirve de nada si el bloque es más alto
+   * que la ventana: la cartera quedaba cortada abajo y solo se veía entera
+   * bajando hasta el final. Lo dijo María: *"solo si bajo hasta el final puedo
+   * ver la cartera"*.
+   *
+   * La primera vuelta se pasó para el otro lado: le puse tope al alto y la caja
+   * quedó apaisada, con la cartera chiquita en el medio y negro a los costados.
+   * Lo dijo María: *"tan pequeño el visor tampoco, ahí no puedo apreciar bien
+   * la cartera"*.
+   *
+   * Lo que va es al revés: **el alto es todo lo que entra en la ventana y el
+   * ancho lo sigue** por el 4:5, aunque sobre columna al costado. Así la
+   * cartera se ve lo más grande posible y entera. En pantalla angosta no hay
+   * columna al lado y la caja ocupa el ancho, como siempre.
+   */
   return (
-    <div>
+    <div className="lg:sticky lg:top-20 lg:self-start">
       {patron && (
-        <div className="mb-3 flex gap-2">
+        <div className="mb-3 flex shrink-0 gap-2">
           <button
             type="button"
             onClick={() => setVista("fotos")}
@@ -56,22 +105,33 @@ export default function GaleriaPieza({
           </button>
           <button
             type="button"
-            onClick={() => setVista("tejido")}
-            className={vista === "tejido" ? "chip chip-oro" : "chip"}
+            onClick={() => setVista("persona")}
+            className={vista === "persona" ? "chip chip-oro" : "chip"}
           >
-            Cómo se teje
+            En persona
           </button>
         </div>
       )}
 
-      <div className="aspect-[4/5] overflow-hidden border border-linea bg-white">
-        {(vista === "3d" || enTejido) && patron ? (
+      <div
+        className={`mx-auto aspect-[4/5] w-full overflow-hidden border border-linea lg:h-[calc(100vh-13rem)] lg:w-auto lg:max-w-full ${vista === "fotos" ? "bg-white" : "fondo-3d"}`}
+      >
+        {vista !== "fotos" && patron && medidas ? (
           <Cartera3D
-            medidas={patron.medidas}
-            paleta={patron.paleta}
-            celdas={patron.celdas}
+            medidas={medidas}
+            paleta={paleta}
+            celdas={celdas}
+            // Un modelo base va entero en gris, forro incluido: el forro de
+            // fábrica es rosa y desentonaba con la cartera sin color.
+            colorForro={patron.enGris && !personalizacion?.cuenta ? FORRO_BASE : undefined}
+            conManiqui={vista === "persona"}
+            // Con el maniquí no gira sola: la gracia es compararla con el
+            // cuerpo, y girando cuesta medirla de un vistazo.
             autoGirar={vista === "3d"}
-            cuentasVisibles={enTejido ? tejido.visibles : undefined}
+            // Al cliente se le muestra la pieza terminada: con su hilo y con el
+            // forro puesto. Los interruptores son cosa del taller, no de acá.
+            mostrarHilo
+            mostrarForro
             className="h-full w-full"
           />
         ) : (
@@ -83,22 +143,21 @@ export default function GaleriaPieza({
         )}
       </div>
 
-      {enTejido && layout ? (
-        <div className="mt-4 border border-linea p-4">
-          <BarraTejido tejido={tejido} layout={layout} paleta={patron.paleta} compacta />
-          <p className="mt-3 text-xs text-gris">
-            Así se arma, en el mismo orden en que María la teje: primero la base,
-            después las paredes, la solapa y por último el asa.
-          </p>
-        </div>
-      ) : vista === "3d" && patron ? (
-        <p className="mt-3 text-xs text-gris">
-          Arrastrá para girarla. Está armada cuenta por cuenta:{" "}
-          <span className="tabular-nums">{patron.totalCuentas}</span> cuentas tejidas en cruz.
+      {vista !== "fotos" && patron ? (
+        <p className="mt-3 shrink-0 text-xs text-gris">
+          {vista === "persona" ? (
+            <>Al lado de alguien de 1,60 m. Arrastrá para girar.</>
+          ) : (
+            <>
+              Arrastrá para girarla. Está armada cuenta por cuenta:{" "}
+              <span className="tabular-nums">{celdas.length}</span> cuentas de {tamanoMm} mm,
+              tejidas en cruz.
+            </>
+          )}
         </p>
       ) : (
         fotos.length > 1 && (
-          <div className="mt-3 grid grid-cols-4 gap-3">
+          <div className="mt-3 grid shrink-0 grid-cols-4 gap-3">
             {fotos.map((f, i) => (
               <button
                 key={f.id}

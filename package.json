@@ -9,7 +9,10 @@
     "lint": "next lint",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
-    "db:studio": "prisma studio"
+    "db:stock": "tsx prisma/cargar-stock.ts",
+    "db:cristales": "tsx prisma/cargar-cristales.ts",
+    "db:studio": "prisma studio",
+    "fichas:pulseras": "tsx scripts/fichas-pulsera.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.1.0",

@@ -10,6 +10,9 @@ nada desde cero.
 | Documento | De qué trata |
 |---|---|
 | [Diseñador del cliente](disenador-cliente.md) | El cliente arma su propia pieza en la tienda. Empieza por el hilo de cuentas. |
+| [Carteras con silueta](carteras-con-silueta.md) | Cómo el motor 3D dibuja una cartera que no es una caja. El corazón. |
+| [La cuadrada](cartera-cuadrada.md) | La caja que se angosta hasta dos aros de acero y cuelga de una cadena. |
+| [Estampados](estampados.md) | Elegir una cartera llana y ponerle un dibujo encima. Los cien del catálogo. |
 
 ## Qué va acá y qué no
 

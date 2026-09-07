@@ -1,8 +1,9 @@
 "use client";
 
+import { estiloDeCuenta } from "@/lib/cuentas";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ACABADOS_CUENTA, type AcabadoCuenta, type CuentaDisponible } from "@/lib/cuentas";
+import { ACABADOS_CUENTA, NOMBRES_ACABADO, type AcabadoCuenta, type CuentaDisponible } from "@/lib/cuentas";
 
 type CuentaEditable = CuentaDisponible & { activo: boolean };
 type FormularioCuenta = Omit<CuentaEditable, "id">;
@@ -12,6 +13,7 @@ const VACIA: FormularioCuenta = {
   color: "#f4ece0",
   tamanoMm: 6,
   acabado: "perla",
+  precioUnidad: 0,
   stock: 0,
   activo: true,
 };
@@ -22,6 +24,8 @@ export default function GestorCuentas({ iniciales }: { iniciales: CuentaEditable
   const [cuentas, setCuentas] = useState(iniciales);
   const [guardando, setGuardando] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [tipo, setTipo] = useState<AcabadoCuenta | "">("");
+  const visibles = cuentas.filter((cuenta) => !tipo || cuenta.acabado === tipo);
 
   async function crear(e: React.FormEvent) {
     e.preventDefault();
@@ -79,11 +83,12 @@ export default function GestorCuentas({ iniciales }: { iniciales: CuentaEditable
       <form onSubmit={crear} className="tarjeta p-6">
         <p className="sobretitulo">Nueva cuenta</p>
         <div className="filete mb-6 mt-2 max-w-[5rem]" />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
           <Campo etiqueta="Nombre"><input className="campo" value={nueva.nombre} onChange={(e) => setNueva({ ...nueva, nombre: e.target.value })} placeholder="Perla marfil" required /></Campo>
           <Campo etiqueta="Color"><input className="campo h-11 p-1" type="color" value={nueva.color} onChange={(e) => setNueva({ ...nueva, color: e.target.value })} /></Campo>
           <Campo etiqueta="Tamaño (mm)"><input className="campo" type="number" min="1" step="1" value={nueva.tamanoMm} onChange={(e) => setNueva({ ...nueva, tamanoMm: Number(e.target.value) })} required /></Campo>
           <Campo etiqueta="Acabado"><Acabado valor={nueva.acabado} alCambiar={(acabado) => setNueva({ ...nueva, acabado })} /></Campo>
+          <Campo etiqueta="Precio c/u"><input className="campo" type="number" min="0" step="0.01" value={nueva.precioUnidad} onChange={(e) => setNueva({ ...nueva, precioUnidad: Number(e.target.value) })} required /></Campo>
           <Campo etiqueta="Unidades"><input className="campo" type="number" min="0" step="1" value={nueva.stock} onChange={(e) => setNueva({ ...nueva, stock: Number(e.target.value) })} required /></Campo>
         </div>
         <button type="submit" className="btn mt-5" disabled={guardando === "nueva"}>{guardando === "nueva" ? "Guardando..." : "Agregar al inventario"}</button>
@@ -97,17 +102,26 @@ export default function GestorCuentas({ iniciales }: { iniciales: CuentaEditable
           <p className="text-sm text-humo">{cuentas.length} tipos</p>
         </div>
         <div className="filete mb-6 mt-3 max-w-[6rem]" />
+        <div className="mb-4 max-w-xs">
+          <label className="etiqueta" htmlFor="tipo-cuenta">Filtrar por tipo de cuenta</label>
+          <select id="tipo-cuenta" className="campo" value={tipo} onChange={(e) => setTipo(e.target.value as AcabadoCuenta | "")}>
+            <option value="">Todos los tipos ({cuentas.length})</option>
+            {ACABADOS_CUENTA.map((acabado) => <option key={acabado} value={acabado}>{NOMBRES_ACABADO[acabado]}</option>)}
+          </select>
+        </div>
         {cuentas.length === 0 ? (
           <div className="tarjeta p-10 text-center text-humo">Todavia no cargaste cuentas para usar en los diseños.</div>
         ) : (
           <div className="space-y-3">
-            {cuentas.map((cuenta) => (
-              <article key={cuenta.id} className="tarjeta grid gap-4 p-4 sm:grid-cols-[3rem_minmax(0,1fr)_6rem_6rem_6rem_7rem_auto] sm:items-end">
-                <div className="h-12 w-12 rounded-full border border-linea" style={{ background: cuenta.color }} />
+            {visibles.length === 0 && <p className="text-humo">No hay cuentas de este tipo.</p>}
+            {visibles.map((cuenta) => (
+              <article key={cuenta.id} className="tarjeta grid gap-4 p-4 sm:grid-cols-[3rem_minmax(0,1fr)_5rem_6rem_5rem_6rem_6rem_auto] sm:items-end">
+                <div className="h-12 w-12 rounded-full border border-linea" style={estiloDeCuenta(cuenta)} />
                 <Campo etiqueta="Nombre"><input className="campo" value={cuenta.nombre} onChange={(e) => cambiar(cuenta.id, "nombre", e.target.value)} /></Campo>
                 <Campo etiqueta="Color"><input className="campo h-11 p-1" type="color" value={cuenta.color} onChange={(e) => cambiar(cuenta.id, "color", e.target.value)} /></Campo>
                 <Campo etiqueta="Acabado"><Acabado valor={cuenta.acabado} alCambiar={(acabado) => cambiar(cuenta.id, "acabado", acabado)} /></Campo>
                 <Campo etiqueta="Tamaño"><input className="campo" type="number" min="1" value={cuenta.tamanoMm} onChange={(e) => cambiar(cuenta.id, "tamanoMm", Number(e.target.value))} /></Campo>
+                <Campo etiqueta="Precio c/u"><input className="campo" type="number" min="0" step="0.01" value={cuenta.precioUnidad} onChange={(e) => cambiar(cuenta.id, "precioUnidad", Number(e.target.value))} /></Campo>
                 <Campo etiqueta="Unidades"><input className="campo" type="number" min="0" value={cuenta.stock} onChange={(e) => cambiar(cuenta.id, "stock", Number(e.target.value))} /></Campo>
                 <div className="flex flex-wrap gap-2 sm:justify-end">
                   <label className="flex items-center gap-2 text-xs text-humo"><input type="checkbox" checked={cuenta.activo} onChange={(e) => cambiar(cuenta.id, "activo", e.target.checked)} /> Activa</label>
@@ -128,5 +142,5 @@ function Campo({ etiqueta, children }: { etiqueta: string; children: React.React
 }
 
 function Acabado({ valor, alCambiar }: { valor: AcabadoCuenta; alCambiar: (valor: AcabadoCuenta) => void }) {
-  return <select className="campo" value={valor} onChange={(e) => alCambiar(e.target.value as AcabadoCuenta)}>{ACABADOS_CUENTA.map((acabado) => <option key={acabado} value={acabado}>{acabado}</option>)}</select>;
+  return <select className="campo" value={valor} onChange={(e) => alCambiar(e.target.value as AcabadoCuenta)}>{ACABADOS_CUENTA.map((acabado) => <option key={acabado} value={acabado}>{NOMBRES_ACABADO[acabado]}</option>)}</select>;
 }

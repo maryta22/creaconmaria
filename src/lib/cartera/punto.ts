@@ -17,7 +17,10 @@ export const PUNTO_DE: Record<Panel, Punto> = {
   lateralIzq: "cruzadoPlano",
   lateralDer: "cruzadoPlano",
   solapa: "cruzadoPlano",
+  contorno: "cruzadoPlano",
   asa: "cruzadoTubular",
+  asaFrente: "cruzadoTubular",
+  asaEspalda: "cruzadoTubular",
 };
 
 export const PUNTOS: Record<Punto, { nombre: string; comoVa: string }> = {

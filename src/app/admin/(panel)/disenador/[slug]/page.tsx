@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { acabadoDeCuenta } from "@/lib/cuentas";
+import { medidasDePatron } from "@/lib/cartera/geometria";
 import DisenadorCartera, { type PatronEditable } from "@/components/DisenadorCartera";
 
 export const dynamic = "force-dynamic";
@@ -27,17 +29,10 @@ export default async function EditarPatron({ params }: { params: Promise<{ slug:
     id: p.id,
     nombre: p.nombre,
     ficha: p.ficha,
-    medidas: {
-      anchoCm: p.anchoCm,
-      altoCm: p.altoCm,
-      profundidadCm: p.profundidadCm,
-      altoSolapaCm: p.altoSolapaCm,
-      asaCm: p.asaCm,
-      cuentaMm: p.cuentaMm,
-      separacion: p.separacion,
-    },
+    medidas: medidasDePatron(p),
     paleta: JSON.parse(p.paleta),
     celdas: p.celdas,
+    forroColor: p.forroColor,
   };
 
   return (
@@ -69,7 +64,8 @@ export default async function EditarPatron({ params }: { params: Promise<{ slug:
           nombre: cuenta.nombre,
           color: cuenta.color,
           tamanoMm: cuenta.tamanoMm,
-          acabado: cuenta.acabado as "perla" | "metal" | "mate",
+          acabado: acabadoDeCuenta(cuenta.acabado),
+          precioUnidad: cuenta.precioUnidad,
           stock: cuenta.stock,
         }))}
       />

@@ -5,7 +5,7 @@ import PieDePagina from "@/components/PieDePagina";
 export default function LayoutTienda({ children }: { children: React.ReactNode }) {
   return (
     <CarritoProveedor>
-      <div className="flex min-h-screen flex-col">
+      <div className="flex min-h-screen flex-col bg-white">
         <Cabecera />
         <main className="flex-1">{children}</main>
         <PieDePagina />

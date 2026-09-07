@@ -1,9 +1,9 @@
 "use client";
 
+import { estiloDeCuenta } from "@/lib/cuentas";
 import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Cartera3D from "./Cartera3D";
-import { BarraTejido, useTejido } from "./ReproductorTejido";
 import { armarLayout, conteoPorPanel } from "@/lib/cartera/geometria";
 import type { MedidasCartera } from "@/lib/cartera/geometria";
 import { comprimir, descomprimir, type CuentaPaleta } from "@/lib/cartera/modelos";
@@ -14,6 +14,7 @@ export type PatronEditable = {
   nombre: string;
   ficha: string | null;
   medidas: MedidasCartera;
+  forroColor: string;
   paleta: CuentaPaleta[];
   celdas: string;
 };
@@ -32,17 +33,20 @@ export default function DisenadorCartera({ patron, cuentasDisponibles }: {
   cuentasDisponibles: CuentaDisponible[];
 }) {
   const router = useRouter();
+  const cuentasDeMedidaOriginal = useMemo(
+    () => cuentasDisponibles.filter((cuenta) => cuenta.tamanoMm === patron.medidas.cuentaMm),
+    [cuentasDisponibles, patron.medidas.cuentaMm],
+  );
   const [medidas, setMedidas] = useState(patron.medidas);
+  const [forroColor, setForroColor] = useState(patron.forroColor);
   const [paleta, setPaleta] = useState(patron.paleta);
   const [seleccion, setSeleccion] = useState(0);
   const [panelEnCambio, setPanelEnCambio] = useState<string | null>(null);
-  const [cuentaElegidaId, setCuentaElegidaId] = useState(cuentasDisponibles[0]?.id ?? "");
-  const [verHilo, setVerHilo] = useState(true);
+  const [cuentaElegidaId, setCuentaElegidaId] = useState(cuentasDeMedidaOriginal[0]?.id ?? "");
   const [guardando, setGuardando] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
 
   const layout = useMemo(() => armarLayout(medidas), [medidas]);
-  const tejido = useTejido(layout.cuentas.length);
 
   // El patrón guardado puede ser de otras medidas; se recorta o rellena solo.
   const [celdas, setCeldas] = useState<number[]>(() =>
@@ -88,7 +92,7 @@ export default function DisenadorCartera({ patron, cuentasDisponibles }: {
     setCeldas((previo) => {
       const copia = previo.slice(0, layout.cuentas.length);
       while (copia.length < layout.cuentas.length) copia.push(0);
-      for (let i = rejilla.desde; i < rejilla.desde + rejilla.filas * rejilla.cols; i++) {
+      for (let i = rejilla.desde; i < rejilla.desde + rejilla.total; i++) {
         copia[i] = indice;
       }
       return copia;
@@ -101,7 +105,7 @@ export default function DisenadorCartera({ patron, cuentasDisponibles }: {
     const r = await fetch(`/api/patrones/${patron.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...medidas, paleta, celdas: comprimir(celdasAjustadas) }),
+      body: JSON.stringify({ ...medidas, forroColor, paleta, celdas: comprimir(celdasAjustadas) }),
     });
     setGuardando(false);
     if (r.ok) {
@@ -121,11 +125,29 @@ export default function DisenadorCartera({ patron, cuentasDisponibles }: {
 
   function abrirCambio(panel: string) {
     setPanelEnCambio((actual) => actual === panel ? null : panel);
-    if (!cuentaElegidaId) setCuentaElegidaId(cuentasDisponibles[0]?.id ?? "");
+    if (!cuentaElegidaId) setCuentaElegidaId(cuentasDeMedidaOriginal[0]?.id ?? "");
+  }
+
+  function seleccionarCuentaDeStock(cuenta: CuentaDisponible) {
+    const entrada: CuentaPaleta = {
+      nombre: cuenta.nombre,
+      color: cuenta.color,
+      mm: cuenta.tamanoMm,
+      acabado: cuenta.acabado,
+    };
+    const indice = paleta.findIndex((item) =>
+      item.nombre === entrada.nombre && item.color === entrada.color && item.mm === entrada.mm && item.acabado === entrada.acabado,
+    );
+    if (indice >= 0) {
+      setSeleccion(indice);
+      return;
+    }
+    setPaleta((actual) => [...actual, entrada]);
+    setSeleccion(paleta.length);
   }
 
   function aplicarCuentaAlPanel(panel: string) {
-    const cuenta = cuentasDisponibles.find((item) => item.id === cuentaElegidaId);
+    const cuenta = cuentasDeMedidaOriginal.find((item) => item.id === cuentaElegidaId);
     if (!cuenta) return;
     const entrada: CuentaPaleta = {
       nombre: cuenta.nombre,
@@ -145,14 +167,23 @@ export default function DisenadorCartera({ patron, cuentasDisponibles }: {
     setPanelEnCambio(null);
   }
 
+  /**
+   * El hilo tapa las cuentas cuando se está pintando, así que arranca
+   * apagado; pero es lo único que muestra cómo se teje, así que se puede
+   * prender. No es clickeable: pintar sigue acertando siempre a la cuenta.
+   */
+  const [verHilo, setVerHilo] = useState(false);
+  /** El forro de tela por dentro del cuerpo y debajo de la solapa. */
+  const [verForro, setVerForro] = useState(true);
+
   function reiniciarCambios() {
     if (!window.confirm("Se descartaran todos los cambios sin guardar. Deseas continuar?")) return;
     setMedidas(patron.medidas);
+    setForroColor(patron.forroColor);
     setPaleta(patron.paleta);
     setCeldas(descomprimir(patron.celdas, armarLayout(patron.medidas).cuentas.length));
     setSeleccion(0);
     setPanelEnCambio(null);
-    setVerHilo(true);
     setAviso(null);
   }
 
@@ -160,7 +191,7 @@ export default function DisenadorCartera({ patron, cuentasDisponibles }: {
     <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
       {/* Lienzo 3D */}
       <div className="lg:sticky lg:top-6 lg:self-start">
-        <div className="relative aspect-square border border-linea bg-gradient-to-b from-white to-hueso sm:aspect-[4/3]">
+        <div className="fondo-3d relative aspect-square border border-linea sm:aspect-[4/3]">
           <Cartera3D
             medidas={medidas}
             paleta={paleta}
@@ -168,10 +199,19 @@ export default function DisenadorCartera({ patron, cuentasDisponibles }: {
             editable
             onPintar={pintar}
             mostrarHilo={verHilo}
-            cuentasVisibles={tejido.visibles}
+            mostrarForro={verForro}
+            colorForro={forroColor}
             className="h-full w-full"
           />
-          <p className="pointer-events-none absolute bottom-3 left-3 text-xs text-gris">
+          <div className="absolute right-3 top-3 flex flex-col items-end gap-2">
+            <BotonVisor activo={verForro} onClick={() => setVerForro((v) => !v)}>
+              {verForro ? "Quitar forro" : "Poner forro"}
+            </BotonVisor>
+            <BotonVisor activo={verHilo} onClick={() => setVerHilo((v) => !v)}>
+              {verHilo ? "Ocultar hilo" : "Ver el hilo"}
+            </BotonVisor>
+          </div>
+          <p className="pointer-events-none absolute bottom-3 left-3 text-xs text-papel/60">
             Arrastrá para girar · rueda para acercar · clic en una cuenta para pintarla
           </p>
         </div>
@@ -206,7 +246,7 @@ export default function DisenadorCartera({ patron, cuentasDisponibles }: {
                 >
                   <span
                     className="h-7 w-7 shrink-0 rounded-full border border-linea"
-                    style={{ background: p.color }}
+                    style={estiloDeCuenta(p)}
                   />
                   <span className="flex-1">
                     <span className="block text-sm leading-tight">{p.nombre}</span>
@@ -217,6 +257,33 @@ export default function DisenadorCartera({ patron, cuentasDisponibles }: {
               </li>
             ))}
           </ul>
+
+          <div className="mt-6 border-t border-linea pt-5">
+            <p className="sobretitulo">Disponibles en stock</p>
+            <p className="mt-2 text-xs text-gris">Elegí una para agregarla a la paleta de este diseño.</p>
+            <ul className="mt-3 max-h-80 space-y-2 overflow-y-auto pr-1">
+              {cuentasDeMedidaOriginal.map((cuenta) => (
+                <li key={cuenta.id}>
+                  <button
+                    type="button"
+                    onClick={() => seleccionarCuentaDeStock(cuenta)}
+                    className="flex w-full items-center gap-3 border border-linea bg-white p-2 text-left hover:border-oro"
+                  >
+                    <span className="h-7 w-7 shrink-0 rounded-full border border-linea" style={estiloDeCuenta(cuenta)} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm leading-tight">{cuenta.nombre}</span>
+                      <span className="text-xs tabular-nums text-gris">{cuenta.tamanoMm} mm · {cuenta.stock} disponibles</span>
+                    </span>
+                  </button>
+                </li>
+              ))}
+              {cuentasDeMedidaOriginal.length === 0 && (
+                <li className="border border-linea p-3 text-xs text-gris">
+                  No hay cuentas disponibles de {patron.medidas.cuentaMm} mm.
+                </li>
+              )}
+            </ul>
+          </div>
         </section>
 
         <section id="medidas" className="tarjeta scroll-mt-16 p-5">
@@ -255,19 +322,9 @@ export default function DisenadorCartera({ patron, cuentasDisponibles }: {
               <p className="sobretitulo">Diseño</p>
               <div className="filete mb-2 mt-2 max-w-[5rem]" />
             </div>
-            <button
-              type="button"
-              onClick={() => setVerHilo((v) => !v)}
-              className={verHilo ? "chip chip-oro" : "chip"}
-            >
-              {verHilo ? "Con hilo" : "Sin hilo"}
-            </button>
           </div>
 
-          <p className="mt-3 text-xs text-gris">Orden de armado y cuentas necesarias por pieza.</p>
-          <div className="mt-4 border border-linea bg-white p-3">
-            <BarraTejido tejido={tejido} layout={layout} paleta={paleta} />
-          </div>
+          <p className="mt-3 text-xs text-gris">Cambiar la cuenta de una pieza aplica el color elegido a toda esa secciÃ³n.</p>
           <ul className="mt-4 divide-y divide-linea border-y border-linea text-sm">
             {paneles.map((p) => (
               <li key={p.panel} className="py-3">
@@ -295,7 +352,7 @@ export default function DisenadorCartera({ patron, cuentasDisponibles }: {
                         value={cuentaElegidaId}
                         onChange={(e) => setCuentaElegidaId(e.target.value)}
                       >
-                        {cuentasDisponibles.map((cuenta) => (
+                        {cuentasDeMedidaOriginal.map((cuenta) => (
                           <option key={cuenta.id} value={cuenta.id}>
                             {cuenta.nombre} ({cuenta.tamanoMm} mm, {cuenta.stock} disponibles)
                           </option>
@@ -307,7 +364,7 @@ export default function DisenadorCartera({ patron, cuentasDisponibles }: {
                       <span
                         id={`color-${p.panel}`}
                         className="h-8 w-10 border border-linea"
-                        style={{ background: cuentasDisponibles.find((cuenta) => cuenta.id === cuentaElegidaId)?.color ?? "#ffffff" }}
+                        style={{ background: cuentasDeMedidaOriginal.find((cuenta) => cuenta.id === cuentaElegidaId)?.color ?? "#ffffff" }}
                       />
                     </div>
                     <button
@@ -342,5 +399,32 @@ export default function DisenadorCartera({ patron, cuentasDisponibles }: {
 
       </aside>
     </div>
+  );
+}
+
+/** Un interruptor sobre el visor 3D: se lee sobre el fondo oscuro. */
+function BotonVisor({
+  activo,
+  onClick,
+  children,
+}: {
+  activo: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={activo}
+      className="border px-3 py-1.5 text-xs uppercase tracking-[0.12em]"
+      style={{
+        background: activo ? "var(--color-oro)" : "rgba(18,16,14,0.55)",
+        borderColor: activo ? "var(--color-oro)" : "rgba(250,248,244,0.35)",
+        color: activo ? "var(--color-tinta)" : "var(--color-papel)",
+      }}
+    >
+      {children}
+    </button>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
-import type { LineaCarrito, ProductoCarrito } from "@/lib/carrito";
+import { claveLineaCarrito, type LineaCarrito, type ProductoCarrito } from "@/lib/carrito";
 
 const CLAVE_CARRITO = "crea-con-maria-carrito";
 
@@ -11,8 +11,8 @@ type ContextoCarrito = {
   cantidadTotal: number;
   total: number;
   agregar: (producto: ProductoCarrito) => void;
-  cambiarCantidad: (id: string, cantidad: number) => void;
-  quitar: (id: string) => void;
+  cambiarCantidad: (clave: string, cantidad: number) => void;
+  quitar: (clave: string) => void;
   vaciar: () => void;
 };
 
@@ -43,20 +43,21 @@ export function CarritoProveedor({ children }: { children: React.ReactNode }) {
   function agregar(producto: ProductoCarrito) {
     if (producto.stock <= 0) return;
     setLineas((actuales) => {
-      const existe = actuales.find((linea) => linea.id === producto.id);
+      const clave = claveLineaCarrito(producto);
+      const existe = actuales.find((linea) => claveLineaCarrito(linea) === clave);
       if (!existe) return [...actuales, { ...producto, cantidad: 1 }];
       return actuales.map((linea) =>
-        linea.id === producto.id
+        claveLineaCarrito(linea) === clave
           ? { ...linea, ...producto, cantidad: Math.min(linea.cantidad + 1, producto.stock) }
           : linea,
       );
     });
   }
 
-  function cambiarCantidad(id: string, cantidad: number) {
+  function cambiarCantidad(clave: string, cantidad: number) {
     setLineas((actuales) =>
       actuales.flatMap((linea) => {
-        if (linea.id !== id) return [linea];
+        if (claveLineaCarrito(linea) !== clave) return [linea];
         if (cantidad <= 0) return [];
         return [{ ...linea, cantidad: Math.min(Math.trunc(cantidad), linea.stock) }];
       }),
@@ -70,7 +71,7 @@ export function CarritoProveedor({ children }: { children: React.ReactNode }) {
     total: lineas.reduce((suma, linea) => suma + linea.cantidad * linea.precio, 0),
     agregar,
     cambiarCantidad,
-    quitar: (id) => setLineas((actuales) => actuales.filter((linea) => linea.id !== id)),
+    quitar: (clave) => setLineas((actuales) => actuales.filter((linea) => claveLineaCarrito(linea) !== clave)),
     vaciar: () => setLineas([]),
   };
 

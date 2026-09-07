@@ -25,6 +25,11 @@ function num(valor: number) {
   return new Intl.NumberFormat("es-EC", { maximumFractionDigits: 1 }).format(valor);
 }
 
+/** 17.3 -> "17,3 cm". El formateo de medidas vive todo acá. */
+export function cm(valor: number) {
+  return `${num(valor)} cm`;
+}
+
 /**
  * La medida principal, corta, para mostrar en la tarjeta del catálogo.
  * Carteras van en ancho × alto × profundidad; el resto, largo.
@@ -72,7 +77,7 @@ export function medidasDetalladas(p: ConMedidas): { etiqueta: string; valor: str
   return filas;
 }
 
-/** "Pulsera Perla Marfil" -> "pulsera-perla-marfil" */
+/** "Cartera Orca" -> "cartera-orca" */
 export function aSlug(texto: string) {
   return texto
     .normalize("NFD")

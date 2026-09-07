@@ -1,4 +1,9 @@
-import { armarHilos, type LayoutCartera } from "@/lib/cartera/geometria";
+import {
+  armarHilos,
+  esAsa,
+  sentidoDeFila,
+  type LayoutCartera,
+} from "@/lib/cartera/geometria";
 import PuntoCruzado from "./PuntoCruzado";
 import { FICHA_DEL_PUNTO } from "@/lib/cartera/punto";
 import type { CuentaPaleta } from "@/lib/cartera/modelos";
@@ -34,17 +39,30 @@ const ORO = "#96742c";
  * impreso en blanco y negro. Los corchetes dorados de los bordes dicen con qué
  * pieza se cose cada lado.
  */
-function Cuadricula({ panel, paleta }: { panel: PanelMapa; paleta: CuentaPaleta[] }) {
+function Cuadricula({
+  panel,
+  paleta,
+  modo,
+}: {
+  panel: PanelMapa;
+  paleta: CuentaPaleta[];
+  /** `color` = qué cuenta va en cada lugar. `orden` = en qué orden se ensartan. */
+  modo: "color" | "orden";
+}) {
   const mmMaximo = Math.max(...paleta.map((p) => p.mm));
   const marcada = (n: number, total: number) => n === 1 || n === total || n % 5 === 0;
 
-  // Solo se reserva espacio del lado donde efectivamente hay una unión.
-  const lados = new Set(panel.costuras.map((c) => LADO[c.borde]));
+  // Las costuras solo van en la de colores: en la del orden estorban.
+  const costuras = modo === "color" ? panel.costuras : [];
+  const lados = new Set(costuras.map((c) => LADO[c.borde]));
   const ox = MARGEN_IZQ + (lados.has("izquierda") ? AIRE_COSTURA : 0);
   const oy = MARGEN_SUP + (lados.has("arriba") ? AIRE_COSTURA : 0);
   const anchoRejilla = panel.cols * CELDA;
   const altoRejilla = panel.filas * CELDA;
-  const ancho = ox + anchoRejilla + 6 + (lados.has("derecha") ? AIRE_COSTURA : 0);
+  // En la de orden va una flecha por fila a la derecha: hay que dejarle lugar
+  // o el viewBox la corta.
+  const aireFlecha = modo === "orden" ? 16 : 0;
+  const ancho = ox + anchoRejilla + 6 + aireFlecha + (lados.has("derecha") ? AIRE_COSTURA : 0);
   const alto = oy + altoRejilla + 6 + (lados.has("abajo") ? AIRE_COSTURA : 0);
 
   /** El corchete dorado que marca un borde cosido, con el nombre de su pareja. */
@@ -99,7 +117,7 @@ function Cuadricula({ panel, paleta }: { panel: PanelMapa; paleta: CuentaPaleta[
       aria-label={`Cuadrícula de ${panel.nombre}: ${panel.cols} columnas por ${panel.filas} filas`}
       className="mx-auto block h-auto max-w-full"
     >
-      {panel.costuras.map((costura) => (
+      {costuras.map((costura) => (
         <Costura key={`${costura.borde}-${costura.con}`} costura={costura} />
       ))}
 
@@ -129,31 +147,48 @@ function Cuadricula({ panel, paleta }: { panel: PanelMapa; paleta: CuentaPaleta[
                 {f + 1}
               </text>
             )}
+            {/* En la de orden, hacia dónde va la fila. El hilo dobla en el
+                borde: no se vuelve al otro lado de la pieza. */}
+            {modo === "orden" && (
+              <text x={ox + panel.cols * CELDA + 7} y={y + 4} fontSize="12" fill="#b08d3f">
+                {sentidoDeFila(panel.serpentea, f) === "va" ? "→" : "←"}
+              </text>
+            )}
             {fila.map((indice, c) => {
+              // -1 = hueco de la silueta: ahí no va cuenta ni número.
+              if (indice < 0) return null;
               const cuenta = paleta[indice];
               // No escala desde cero: una cuenta de 4 mm quedaría tan chica que
               // no se le leería la letra, que es justo lo que hay que saber.
               const radio = (0.58 + 0.42 * (cuenta.mm / mmMaximo)) * (CELDA / 2 - 1.6);
               const x = ox + c * CELDA + CELDA / 2;
+              // En la de orden la cuenta va en papel: lo que importa es el número.
+              // Sale del layout, no de una fórmula: las filas impares vuelven
+              // —el 1 de esa fila cae a la derecha— y una silueta además saltea
+              // los huecos.
+              const orden = panel.orden[f][c];
+              const etiqueta = modo === "color" ? letraDe(indice) : String(orden);
+              const primera = modo === "orden" && orden === 1;
+              const chico = etiqueta.length > 2;
               return (
                 <g key={c}>
                   <circle
                     cx={x}
                     cy={y}
                     r={radio}
-                    fill={cuenta.color}
-                    stroke="#8b847a"
-                    strokeWidth="0.5"
+                    fill={modo === "color" ? cuenta.color : "#f6f2ea"}
+                    stroke={primera ? ORO : "#8b847a"}
+                    strokeWidth={primera ? 1.8 : 0.5}
                   />
                   <text
                     x={x}
-                    y={y + (radio > 10 ? 4.3 : 3.6)}
+                    y={y + (radio > 10 && !chico ? 4.3 : 3.4)}
                     textAnchor="middle"
-                    fontSize={radio > 10 ? "12" : "10"}
-                    fill={tintaSobre(cuenta.color)}
+                    fontSize={chico ? "8" : radio > 10 ? "12" : "10"}
+                    fill={modo === "color" ? tintaSobre(cuenta.color) : "#4a453e"}
                     fontWeight="600"
                   >
-                    {letraDe(indice)}
+                    {etiqueta}
                   </text>
                 </g>
               );
@@ -284,9 +319,10 @@ export default function MapaTejido({
         <h2 className="titulo text-xl">Las piezas, cuenta por cuenta</h2>
         <div className="filete mb-2 mt-2 max-w-[5rem]" />
         <p className="mb-6 max-w-xl text-xs text-gris">
-          La fila 1 de cada cuadrícula es la primera que se teje, abajo de todo.
-          La letra dentro de cada círculo es el color, y el tamaño del círculo es
-          el tamaño real de la cuenta.
+          Cada pieza va con <b className="text-tinta">dos cuadrículas</b>: una
+          dice qué cuenta va en cada lugar —la letra es el color y el tamaño del
+          círculo es el tamaño real— y la otra, en qué orden se ensartan. En las
+          dos, la fila 1 es la primera que se teje y va abajo de todo.
         </p>
 
         <div className="flex flex-col gap-8">
@@ -316,8 +352,24 @@ export default function MapaTejido({
                 )}
               </p>
 
-              <div className="overflow-x-auto">
-                <Cuadricula panel={panel} paleta={paleta} />
+              <div className="flex flex-col gap-5">
+                <div>
+                  <p className="sobretitulo mb-1.5">Colores · qué cuenta va en cada lugar</p>
+                  <div className="overflow-x-auto">
+                    <Cuadricula panel={panel} paleta={paleta} modo="color" />
+                  </div>
+                </div>
+
+                <div>
+                  <p className="sobretitulo mb-1.5">Orden · en qué secuencia se ensartan</p>
+                  <div className="overflow-x-auto">
+                    <Cuadricula panel={panel} paleta={paleta} modo="orden" />
+                  </div>
+                  <p className="mt-1.5 text-xs text-gris">
+                    Se arranca en la <b className="text-humo">1</b> (marcada en oro), abajo
+                    a la izquierda, y cada fila va de izquierda a derecha.
+                  </p>
+                </div>
               </div>
 
               {panel.costuras.length > 0 && (
@@ -335,10 +387,11 @@ export default function MapaTejido({
                 </div>
               )}
 
-              {panel.panel === "asa" && (
+              {esAsa(panel.panel) && (
                 <p className="mt-4 border-t border-linea pt-3 text-xs text-humo">
-                  Las dos puntas se cosen con argollas a los costados del borde
-                  superior de la cartera, hacia adentro de las esquinas.
+                  {panel.panel === "asa"
+                    ? "Las dos puntas se cosen con argollas a los costados del borde superior de la cartera, hacia adentro de las esquinas."
+                    : "Las dos puntas se cosen con argollas a los costados de su propia cara. Las dos asas van una por cara, no cruzadas por el medio: entre ellas queda la boca."}
                 </p>
               )}
             </div>

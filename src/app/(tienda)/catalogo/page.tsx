@@ -7,7 +7,7 @@ export const metadata = { title: "Catálogo" };
 export default async function Catalogo() {
   const productos = await prisma.producto.findMany({
     where: { publicado: true },
-    include: { fotos: { orderBy: { orden: "asc" } } },
+    include: { fotos: { orderBy: { orden: "asc" } }, patron: true },
     orderBy: [{ stock: "desc" }, { creadoEn: "desc" }],
   });
 

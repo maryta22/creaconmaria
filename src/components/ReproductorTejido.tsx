@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { loQueSeTeje, NOMBRE_PANEL, type LayoutCartera } from "@/lib/cartera/geometria";
+import { esAsa, loQueSeTeje, NOMBRE_PANEL, type LayoutCartera } from "@/lib/cartera/geometria";
 import type { CuentaPaleta } from "@/lib/cartera/modelos";
 import { PUNTO_DE } from "@/lib/cartera/punto";
 import PuntoCruzado from "./PuntoCruzado";
@@ -102,7 +102,10 @@ export function BarraTejido({
   const { visibles, reproduciendo, velocidad, setVelocidad, irA, alternar, verTerminada, total } =
     tejido;
   const enCurso = visibles !== undefined;
-  const puestas = Math.floor(visibles ?? total);
+  // Se dibujan las cuentas con índice < visibles, así que con 7,4 hay **8**
+  // puestas. Con floor decía una menos de las que se ven, y el cartel señalaba
+  // la cuenta anterior a la de la labor.
+  const puestas = Math.ceil(visibles ?? total);
   const donde = loQueSeTeje(layout, puestas);
 
   return (
@@ -134,7 +137,7 @@ export function BarraTejido({
         <>
           <p className="text-sm text-humo">
             Tejiendo <b className="text-tinta">{donde.nombre}</b>
-            {donde.panel === "asa" ? (
+            {esAsa(donde.panel) ? (
               <> · vuelta {donde.fila} de {donde.filas}</>
             ) : (
               <> · fila {donde.fila} de {donde.filas}, cuenta {donde.col} de {donde.cols}</>
@@ -142,6 +145,14 @@ export function BarraTejido({
             <span className="tabular-nums text-gris">
               ({puestas} de {total} cuentas)
             </span>
+          </p>
+
+          <p className="text-xs text-gris">
+            En el 3D hay <b className="text-humo">un solo hilo</b>, con sus dos
+            extremos: los que cuelgan juntos de donde va la labor —{" "}
+            <b style={{ color: "#96742c" }}>I</b> y <b style={{ color: "#4a453e" }}>II</b>.
+            El <b className="text-humo">aro dorado</b> no es un tercer cabo: solo marca
+            la cuenta por donde se empezó la pieza. El doblez queda adentro del tejido.
           </p>
 
           {/* Qué punto se está haciendo ahora mismo */}
@@ -160,7 +171,10 @@ export function BarraTejido({
                 <button
                   key={r.panel}
                   type="button"
-                  onClick={() => irA(r.desde)}
+                  // +1: con la primera cuenta de la pieza ya puesta. Ir al
+                  // índice pelado deja la pieza sin empezar y el cartel
+                  // hablando de la anterior.
+                  onClick={() => irA(r.desde + 1)}
                   className={donde.panel === r.panel ? "chip chip-oro" : "chip"}
                 >
                   {NOMBRE_PANEL[r.panel]}

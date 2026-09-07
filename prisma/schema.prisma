@@ -102,12 +102,38 @@ model DijeStock {
   id            String   @id @default(cuid())
   nombre        String
   descripcion   String?
+  imagenUrl     String?
   stock         Int      @default(0)
   activo        Boolean  @default(true)
   creadoEn      DateTime @default(now())
   actualizadoEn DateTime @updatedAt
 
   @@index([activo])
+}
+
+/// Pedido enviado por la tienda. El stock se confirma manualmente para no
+/// reservar una pieza artesanal hasta hablar con la clienta.
+model Pedido {
+  id          String   @id
+  codigo      String   @unique
+  nombre      String
+  contacto    String
+  nota        String?
+  total       Float
+  lineas      String
+  estado      String   @default("PENDIENTE")
+  creadoEn    DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  @@index([estado])
+  @@index([creadoEn])
+}
+
+/// Ajustes únicos de la vendedora, editables desde el panel protegido.
+model ConfiguracionVendedora {
+  id            String   @id
+  whatsapp      String
+  actualizadoEn DateTime @updatedAt
 }
 
 model PatronCartera {
@@ -117,13 +143,21 @@ model PatronCartera {
   /// Ficha de `carteras diseños/` de la que salió, si viene de una.
   ficha  String?
 
+  /// caja | corazon | tulipan | fresa | cuadrada — con qué forma se arma. Ver src/lib/cartera/geometria.ts
+  forma         String @default("caja")
   anchoCm       Float
   altoCm        Float
   profundidadCm Float
   altoSolapaCm  Float
   asaCm         Float
+  /// Diámetro del aro de acero de las esquinas de arriba. Solo forma "cuadrada".
+  aroCm         Float?
+  /// Largo de la cadena, de aro a aro. Solo forma "cuadrada".
+  cadenaCm      Float?
   cuentaMm      Float
   separacion    Float @default(1.3)
+  /// Color del forro en el visor 3D. Cada cartera conserva el suyo.
+  forroColor    String @default("#e8a6b8")
 
   /// JSON con la paleta: [{ mm, color, nombre, acabado }]
   paleta String
@@ -145,6 +179,38 @@ model PatronCartera {
 /// La paleta se guarda **copiada** adentro del diseño, no referenciada: si
 /// María borra una cuenta del inventario o le cambia el precio, el diseño que
 /// el cliente ya mandó tiene que seguir viéndose igual.
+/// Una cartera que personalizó un cliente en `/disenar/cartera`: eligió una
+/// llana, un estampado y los colores. **No guarda el mapa de tejido**: el
+/// cliente elige, María teje.
+model DisenoCartera {
+  id     String @id @default(cuid())
+  /// Seis caracteres. Es el link que se manda: /disenar/cartera/ver/ABC123
+  codigo String @unique
+
+  /// Slugs de src/lib/cartera/llanas.ts y estampados.ts
+  llana     String
+  estampado String
+  nombre    String
+
+  /// JSON con la paleta, **copiada**: el diseño tiene que verse igual aunque
+  /// María borre esa cuenta del inventario.
+  paleta String
+  /// JSON con las medidas, por lo mismo.
+  medidas String
+  celdas  String
+
+  /// Calculado en el servidor con los precios del inventario. Es estimado.
+  precio Float @default(0)
+
+  /// Datos que dejó el cliente, si los dejó. Solo los ve María.
+  contacto String?
+  nota     String?
+
+  creadoEn DateTime @default(now())
+
+  @@index([creadoEn])
+}
+
 model DisenoCliente {
   id     String @id @default(cuid())
   /// Seis caracteres. Es el link que se manda por WhatsApp: /disenar/ver/ABC123

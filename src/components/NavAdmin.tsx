@@ -6,8 +6,10 @@ import { usePathname, useRouter } from "next/navigation";
 const ENLACES = [
   { href: "/admin", texto: "Resumen" },
   { href: "/admin/stock", texto: "Stock" },
-  { href: "/admin/stock/nuevo", texto: "Cargar pieza" },
-  { href: "/admin/disenador", texto: "Diseñador 3D" },
+  { href: "/admin/pedidos", texto: "Pedidos" },
+  { href: "/admin/disenador", texto: "Carteras" },
+  { href: "/admin/pulseras", texto: "Pulseras" },
+  { href: "/admin/disenos", texto: "Diseños" },
 ];
 
 export default function NavAdmin() {
@@ -21,7 +23,7 @@ export default function NavAdmin() {
   }
 
   return (
-    <header className="no-imprimir border-b border-linea bg-tinta text-papel">
+    <header className="no-imprimir border-b border-oro/30 bg-tinta text-white shadow-lg shadow-tinta/10">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-4">
         <Link href="/admin" className="leading-none">
           <span className="titulo text-lg tracking-[0.12em]">MARÍA</span>
@@ -35,13 +37,13 @@ export default function NavAdmin() {
             <Link
               key={e.href}
               href={e.href}
-              className={ruta === e.href ? "text-oro-claro" : "text-papel/70 hover:text-papel"}
+              className={ruta === e.href ? "text-oro-claro" : "text-white/65 transition-colors hover:text-white"}
             >
               {e.texto}
             </Link>
           ))}
-          <Link href="/" className="text-papel/70 hover:text-papel">Ver tienda</Link>
-          <button onClick={salir} className="text-papel/70 hover:text-papel uppercase">
+          <Link href="/" className="text-white/65 transition-colors hover:text-white">Ver tienda</Link>
+          <button onClick={salir} className="text-white/65 transition-colors hover:text-white uppercase">
             Salir
           </button>
         </nav>

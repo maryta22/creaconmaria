@@ -5,9 +5,13 @@ import { categoriaPorId, nombreCategoria } from "@/lib/categorias";
 import { medidasDetalladas, precio } from "@/lib/formato";
 import TarjetaProducto from "@/components/TarjetaProducto";
 import GaleriaPieza, { type PatronVitrina } from "@/components/GaleriaPieza";
-import { armarLayout } from "@/lib/cartera/geometria";
+import { armarLayout, medidasDePatron } from "@/lib/cartera/geometria";
 import { descomprimir } from "@/lib/cartera/modelos";
 import BotonAgregarCarrito from "@/components/BotonAgregarCarrito";
+import SelectorCuentaCartera, { PersonalizacionCarteraProveedor } from "@/components/SelectorCuentaCartera";
+import { paletaDeVitrina } from "@/lib/cuentas-base";
+import { esCarteraBase } from "@/lib/cartera/llanas";
+import { MEDIDAS_CARTERA } from "@/lib/cartera/medida";
 
 export const dynamic = "force-dynamic";
 
@@ -27,27 +31,41 @@ export default async function Pieza({ params }: { params: Promise<{ slug: string
   // Si la pieza tiene patrón 3D, el cliente puede girarla cuenta por cuenta.
   let patron: PatronVitrina | null = null;
   if (p.patron) {
-    const medidas = {
-      anchoCm: p.patron.anchoCm,
-      altoCm: p.patron.altoCm,
-      profundidadCm: p.patron.profundidadCm,
-      altoSolapaCm: p.patron.altoSolapaCm,
-      asaCm: p.patron.asaCm,
-      cuentaMm: p.patron.cuentaMm,
-      separacion: p.patron.separacion,
-    };
+    const medidas = medidasDePatron(p.patron);
     const layout = armarLayout(medidas);
     patron = {
       medidas,
-      paleta: JSON.parse(p.patron.paleta),
+      paleta: esCarteraBase(p.slug)
+        ? paletaDeVitrina(JSON.parse(p.patron.paleta))
+        : JSON.parse(p.patron.paleta),
+      enGris: esCarteraBase(p.slug),
       celdas: descomprimir(p.patron.celdas, layout.cuentas.length),
       totalCuentas: layout.cuentas.length,
     };
   }
 
   const categoria = categoriaPorId(p.categoria);
-  const medidas = medidasDetalladas(p);
+  /**
+   * Si la pieza se puede personalizar, la medida de la cuenta la elige la
+   * clienta y sale del selector: dejarla también en la tabla de medidas hacía
+   * que la ficha dijera 8 mm mientras el visor mostraba la de 10.
+   */
+  const medidas = medidasDetalladas(p).filter(
+    (fila) => !(p.patron && fila.etiqueta === "Cuenta"),
+  );
   const agotado = p.stock <= 0;
+  const cuentasParaPersonalizar = p.patron
+    ? await prisma.cuentaStock.findMany({
+      /**
+       * Todas las medidas con las que se teje una cartera, no solo la del
+       * patrón: la clienta puede pasar de 8 a 10 mm y la lista de colores tiene
+       * que seguirla. El filtro por medida se hace en la pantalla.
+       */
+      where: { activo: true, stock: { gt: 0 }, tamanoMm: { in: [...MEDIDAS_CARTERA] } },
+      select: { id: true, nombre: true, color: true, tamanoMm: true, acabado: true, precioUnidad: true, stock: true },
+      orderBy: { nombre: "asc" },
+    })
+    : [];
 
   const similares = await prisma.producto.findMany({
     where: { publicado: true, categoria: p.categoria, id: { not: p.id } },
@@ -57,6 +75,7 @@ export default async function Pieza({ params }: { params: Promise<{ slug: string
   });
 
   return (
+    <PersonalizacionCarteraProveedor medidaInicial={p.patron?.cuentaMm ?? 8}>
     <div className="mx-auto max-w-6xl px-6 py-12">
       <nav className="sobretitulo mb-8 flex gap-2">
         <Link href="/catalogo" className="hover:text-tinta">Catálogo</Link>
@@ -118,16 +137,30 @@ export default async function Pieza({ params }: { params: Promise<{ slug: string
           )}
 
           {!agotado && (
-            <div className="mt-8 max-w-sm">
-              <BotonAgregarCarrito producto={{
-                id: p.id,
-                slug: p.slug,
-                nombre: p.nombre,
-                precio: p.precio,
-                stock: p.stock,
-                foto: p.fotos[0]?.url,
-              }} />
-            </div>
+            cuentasParaPersonalizar.length > 0 ? (
+              <SelectorCuentaCartera
+                producto={{
+                  id: p.id,
+                  slug: p.slug,
+                  nombre: p.nombre,
+                  precio: p.precio,
+                  stock: p.stock,
+                  foto: p.fotos[0]?.url,
+                }}
+                cuentas={cuentasParaPersonalizar}
+              />
+            ) : (
+              <div className="mt-8 max-w-sm">
+                <BotonAgregarCarrito producto={{
+                  id: p.id,
+                  slug: p.slug,
+                  nombre: p.nombre,
+                  precio: p.precio,
+                  stock: p.stock,
+                  foto: p.fotos[0]?.url,
+                }} />
+              </div>
+            )
           )}
 
         </div>
@@ -145,5 +178,6 @@ export default async function Pieza({ params }: { params: Promise<{ slug: string
         </section>
       )}
     </div>
+    </PersonalizacionCarteraProveedor>
   );
 }
